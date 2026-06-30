@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "StudyTracker",
+    "slug": "study-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/Pip_Icon.png",
+    "splash": {
+      "backgroundColor": "#0D0F14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tushar.studytracker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Pip_Adaptive_Icon.png",
+        "backgroundColor": "#0D0F14"
+      },
+      "package": "com.tushar.studytracker"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1c958f4b-aabb-427d-b610-eb48ff90c19b"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1c958f4b-aabb-427d-b610-eb48ff90c19b"
+    }
+  }
+}
