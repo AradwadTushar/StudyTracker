@@ -9,6 +9,7 @@ import { useStore } from '../store/useStore';
 import { COLORS, FONTS, RADIUS, SHADOW } from '../utils/theme';
 import { SUBJECTS } from '../data/subjects';
 import SessionHistory from '../components/SessionHistory';
+import * as Haptics from 'expo-haptics';
 
 function fmt(sec) {
   const h = String(Math.floor(sec / 3600)).padStart(2,'0');
@@ -30,6 +31,22 @@ export default function TrackerScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const intervalRef = useRef(null);
+
+  const triggerHaptic = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (e) {}
+  };
+
+  const handleStartSession = (type, title, sub) => {
+    triggerHaptic();
+    startSession(type, title, sub);
+  };
+
+  const handleEndSession = () => {
+    triggerHaptic();
+    endSession();
+  };
 
   useEffect(() => {
     if (activeSession) {
@@ -103,18 +120,18 @@ export default function TrackerScreen() {
           <View style={styles.btnRow}>
             {isIdle && (
               <TouchableOpacity style={[styles.btn, styles.btnGreen]}
-                onPress={() => startSession('study', topic || 'Study session', subject)}>
+                onPress={() => handleStartSession('study', topic || 'Study session', subject)}>
                 <Ionicons name="play" size={18} color="#fff" />
                 <Text style={styles.btnText}>Start Study</Text>
               </TouchableOpacity>
             )}
             {isStudying && (
               <>
-                <TouchableOpacity style={[styles.btn, styles.btnAmber]} onPress={() => { endSession(); startSession('break','Break','Break'); }}>
+                <TouchableOpacity style={[styles.btn, styles.btnAmber]} onPress={() => { handleEndSession(); handleStartSession('break','Break','Break'); }}>
                   <Ionicons name="cafe" size={18} color="#fff" />
                   <Text style={styles.btnText}>Take Break</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={endSession}>
+                <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={handleEndSession}>
                   <Ionicons name="stop" size={18} color="#fff" />
                   <Text style={styles.btnText}>Stop</Text>
                 </TouchableOpacity>
@@ -122,11 +139,11 @@ export default function TrackerScreen() {
             )}
             {isOnBreak && (
               <>
-                <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={() => { endSession(); startSession('study', topic || 'Study session', subject); }}>
+                <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={() => { handleEndSession(); handleStartSession('study', topic || 'Study session', subject); }}>
                   <Ionicons name="play" size={18} color="#fff" />
                   <Text style={styles.btnText}>Resume</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={endSession}>
+                <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={handleEndSession}>
                   <Ionicons name="stop" size={18} color="#fff" />
                   <Text style={styles.btnText}>End</Text>
                 </TouchableOpacity>

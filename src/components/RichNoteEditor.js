@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { marked } from 'marked';
+import { useStore } from '../store/useStore';
 
 // Configure marked to ignore math blocks ($...$ and $$...$$) and treat them as raw text
 marked.use({
@@ -141,6 +142,13 @@ export default function RichNoteEditor({ note, onSave, onClose }) {
   const [showSubs, setShowSubs] = useState(false);
   const [showMdModal, setShowMdModal] = useState(false);
   const contentRef = useRef(note?.content || '');
+
+  const setFullScreenModalOpen = useStore(s => s.setFullScreenModalOpen);
+
+  useEffect(() => {
+    setFullScreenModalOpen(true);
+    return () => setFullScreenModalOpen(false);
+  }, []);
 
   const handleContentChange = (html) => {
     contentRef.current = html;

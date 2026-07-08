@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
   Modal, TextInput, ScrollView, Alert, Linking, Platform,
-  TouchableWithoutFeedback, SafeAreaView,
+  TouchableWithoutFeedback, SafeAreaView, Keyboard, Vibration,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useStore } from '../store/useStore';
 import { COLORS, FONTS, RADIUS, SHADOW } from '../utils/theme';
 
 Notifications.setNotificationHandler({
@@ -65,7 +66,6 @@ function Calculator({ onClose }) {
       if (val==='π') { setDisplay(String(Math.PI)); return; }
       if (val==='e') { setDisplay(String(Math.E));  return; }
       if (val==='x²') {
-        // immediately square the current display value
         try {
           const result = parseFloat((parseFloat(display) ** 2).toFixed(10)).toString();
           setHistory(h => [`${display}² = ${result}`, ...h].slice(0,8));
@@ -73,7 +73,6 @@ function Calculator({ onClose }) {
         } catch { setDisplay('Err'); }
         return;
       }
-      // sin/cos/tan/log/ln/√ — open function waiting for input
       setExpr(expr + sciMap[val]); setDisplay('0'); return;
     }
     if (isOp) { setExpr(expr+display+jsVal); setDisplay('0'); return; }
@@ -153,7 +152,6 @@ function RemindersSheet({ onClose }) {
     await AsyncStorage.setItem('st_reminders', JSON.stringify(updated));
   };
 
-  // Auto-format date as DD/MM/YYYY
   const handleDateChange = (txt) => {
     const digits = txt.replace(/\D/g,'').slice(0,8);
     let out = digits;
@@ -162,7 +160,6 @@ function RemindersSheet({ onClose }) {
     setDate(out);
   };
 
-  // Auto-format time as HH:MM
   const handleTimeChange = (txt) => {
     const digits = txt.replace(/\D/g,'').slice(0,4);
     let out = digits;
@@ -376,8 +373,6 @@ function FormulaSheet({ onClose }) {
         <Text style={frm.title}>Formula Sheet 📐</Text>
         <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={COLORS.textSecondary}/></TouchableOpacity>
       </View>
-
-      {/* Subject tabs — horizontal scroll */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={frm.tabScroll} contentContainerStyle={frm.tabContent}>
         {subjects.map(s => (
           <TouchableOpacity key={s} style={[frm.tab, active===s && frm.tabActive]} onPress={()=>setActive(s)}>
@@ -385,8 +380,6 @@ function FormulaSheet({ onClose }) {
           </TouchableOpacity>
         ))}
       </ScrollView>
-
-      {/* Formulas list */}
       <ScrollView style={frm.list} showsVerticalScrollIndicator={false}>
         {FORMULAS[active].map((f,i) => (
           <View key={i} style={frm.row}>
@@ -417,283 +410,200 @@ const frm = StyleSheet.create({
   indented:   { color:COLORS.textMuted, fontSize:12, paddingLeft:8 },
 });
 
-// ── Unit Converter ────────────────────────────────────────────────────────────
-const CONVERTERS = {
-  Length: {
-    units: ['m','km','cm','mm','ft','in','mi'],
-    toBase: { m:1, km:1000, cm:0.01, mm:0.001, ft:0.3048, in:0.0254, mi:1609.34 },
-  },
-  Weight: {
-    units: ['kg','g','mg','lb','oz','ton'],
-    toBase: { kg:1, g:0.001, mg:0.000001, lb:0.453592, oz:0.0283495, ton:1000 },
-  },
-  Time: {
-    units: ['s','min','hr','day','week','ms'],
-    toBase: { s:1, min:60, hr:3600, day:86400, week:604800, ms:0.001 },
-  },
-  Speed: {
-    units: ['m/s','km/h','mph','knot'],
-    toBase: { 'm/s':1, 'km/h':0.277778, mph:0.44704, knot:0.514444 },
-  },
-  Data: {
-    units: ['B','KB','MB','GB','TB'],
-    toBase: { B:1, KB:1024, MB:1048576, GB:1073741824, TB:1099511627776 },
-  },
-  Temp: { units: ['°C','°F','K'], toBase: null }, // special case
-};
-
-function convertTemp(val, from, to) {
-  let celsius;
-  if (from==='°C') celsius = val;
-  else if (from==='°F') celsius = (val-32)*5/9;
-  else celsius = val-273.15;
-  if (to==='°C') return celsius;
-  if (to==='°F') return celsius*9/5+32;
-  return celsius+273.15;
-}
-
-function UnitConverter({ onClose }) {
-  const [category, setCategory] = useState('Length');
-  const [fromUnit, setFromUnit] = useState('m');
-  const [toUnit,   setToUnit]   = useState('km');
-  const [input,    setInput]    = useState('');
-  const cats = Object.keys(CONVERTERS);
+// ── Scratchpad ───────────────────────────────────────────────────────────────
+function Scratchpad({ onClose }) {
+  const [text, setText] = useState('');
+  const addNote = useStore(s => s.addNote);
 
   useEffect(() => {
-    const units = CONVERTERS[category].units;
-    setFromUnit(units[0]); setToUnit(units[1]); setInput('');
-  }, [category]);
-
-  const convert = () => {
-    const val = parseFloat(input);
-    if (isNaN(val)) return '—';
-    if (category==='Temp') {
-      return parseFloat(convertTemp(val,fromUnit,toUnit).toFixed(6)).toString();
-    }
-    const base = val * CONVERTERS[category].toBase[fromUnit];
-    return parseFloat((base / CONVERTERS[category].toBase[toUnit]).toFixed(8)).toString();
-  };
-
-  const units = CONVERTERS[category].units;
-  const result = input ? convert() : '';
-
-  return (
-    <SafeAreaView style={uc.safe}>
-      <View style={uc.header}>
-        <Text style={uc.title}>Unit Converter 📏</Text>
-        <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={COLORS.textSecondary}/></TouchableOpacity>
-      </View>
-
-      {/* Category pills */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,marginBottom:16}} contentContainerStyle={{gap:8,paddingVertical:4}}>
-        {cats.map(c => (
-          <TouchableOpacity key={c} style={[uc.catPill, category===c && uc.catPillActive]} onPress={()=>setCategory(c)}>
-            <Text style={[uc.catTxt, category===c && uc.catTxtActive]}>{c}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* From/To selectors */}
-      <View style={uc.convRow}>
-        <View style={uc.side}>
-          <Text style={uc.sideLabel}>From</Text>
-          <ScrollView style={uc.unitList} showsVerticalScrollIndicator={false}>
-            {units.map(u => (
-              <TouchableOpacity key={u} style={[uc.unitBtn, fromUnit===u && uc.unitBtnActive]} onPress={()=>setFromUnit(u)}>
-                <Text style={[uc.unitTxt, fromUnit===u && uc.unitTxtActive]}>{u}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={uc.arrowCol}>
-          <Ionicons name="swap-horizontal" size={22} color={COLORS.accent}
-            onPress={()=>{setFromUnit(toUnit);setToUnit(fromUnit);}} style={{marginTop:36}}/>
-        </View>
-
-        <View style={uc.side}>
-          <Text style={uc.sideLabel}>To</Text>
-          <ScrollView style={uc.unitList} showsVerticalScrollIndicator={false}>
-            {units.map(u => (
-              <TouchableOpacity key={u} style={[uc.unitBtn, toUnit===u && uc.unitBtnActive]} onPress={()=>setToUnit(u)}>
-                <Text style={[uc.unitTxt, toUnit===u && uc.unitTxtActive]}>{u}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-
-      {/* Input + result */}
-      <TextInput style={uc.input} placeholder={`Enter value in ${fromUnit}...`}
-        placeholderTextColor={COLORS.textMuted} value={input} onChangeText={setInput}
-        keyboardType="numeric"/>
-      {result ? (
-        <View style={uc.resultCard}>
-          <Text style={uc.resultLabel}>{input} {fromUnit} =</Text>
-          <Text style={uc.resultVal}>{result} {toUnit}</Text>
-        </View>
-      ) : null}
-    </SafeAreaView>
-  );
-}
-
-const uc = StyleSheet.create({
-  safe:         { flex:1, backgroundColor:COLORS.bg, paddingHorizontal:16 },
-  header:       { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:14 },
-  title:        { fontSize:FONTS.lg, fontWeight:'700', color:COLORS.textPrimary },
-  catPill:      { paddingHorizontal:14, paddingVertical:7, borderRadius:20, borderWidth:1, borderColor:COLORS.border, backgroundColor:COLORS.card },
-  catPillActive:{ backgroundColor:COLORS.accentGlow, borderColor:COLORS.accent },
-  catTxt:       { fontSize:FONTS.xs, color:COLORS.textMuted, fontWeight:'600' },
-  catTxtActive: { color:COLORS.accentLight },
-  convRow:      { flexDirection:'row', gap:8, height:180, marginBottom:16 },
-  side:         { flex:1 },
-  sideLabel:    { fontSize:FONTS.xs, color:COLORS.textSecondary, fontWeight:'600', marginBottom:6, textTransform:'uppercase', letterSpacing:0.5 },
-  unitList:     { flex:1, backgroundColor:COLORS.card, borderRadius:RADIUS.md, borderWidth:1, borderColor:COLORS.border },
-  unitBtn:      { paddingVertical:9, paddingHorizontal:12, borderBottomWidth:1, borderBottomColor:COLORS.border+'44' },
-  unitBtnActive:{ backgroundColor:COLORS.accentGlow },
-  unitTxt:      { fontSize:FONTS.sm, color:COLORS.textSecondary, fontWeight:'500' },
-  unitTxtActive:{ color:COLORS.accentLight, fontWeight:'700' },
-  arrowCol:     { justifyContent:'flex-start', alignItems:'center', paddingTop:4 },
-  input:        { backgroundColor:COLORS.card, borderRadius:RADIUS.md, padding:14, color:COLORS.textPrimary, fontSize:FONTS.lg, borderWidth:1, borderColor:COLORS.border, marginBottom:12 },
-  resultCard:   { backgroundColor:COLORS.accentGlow, borderRadius:RADIUS.md, padding:16, borderWidth:1, borderColor:COLORS.accent, alignItems:'center' },
-  resultLabel:  { fontSize:FONTS.sm, color:COLORS.textSecondary, marginBottom:4 },
-  resultVal:    { fontSize:FONTS.xl, fontWeight:'700', color:COLORS.accentLight },
-});
-
-
-// ── Water Tracker ─────────────────────────────────────────────────────────────
-function WaterTracker({ onClose }) {
-  const [glassesCount, setGlassesCount] = React.useState(0);
-  const [glassSize,    setGlassSize]    = React.useState(250);
-  const [reminderMins, setReminderMins] = React.useState(45);
-  const [goalMl,       setGoalMl]       = React.useState(2000);
-  const GLASS_SIZES   = [150, 200, 250, 300, 350];
-  const REMINDER_OPTS = [20, 30, 45, 60, 90];
-
-  React.useEffect(() => {
-    AsyncStorage.getItem('st_water').then(r => {
-      if (r) {
-        const d = JSON.parse(r);
-        const today = new Date().toDateString();
-        if (d.date === today) {
-          setGlassesCount(d.count || 0);
-          setGlassSize(d.glassSize || 250);
-          setReminderMins(d.reminderMins || 45);
-          setGoalMl(d.goalMl || 2000);
-        }
-      }
-    });
+    AsyncStorage.getItem('st_scratchpad').then(t => { if (t) setText(t); });
   }, []);
 
-  const save = async (count, gs, rm, gml) => {
-    const data = { date: new Date().toDateString(), count, glassSize: gs, reminderMins: rm, goalMl: gml };
-    await AsyncStorage.setItem('st_water', JSON.stringify(data));
+  const saveText = async (val) => {
+    setText(val);
+    await AsyncStorage.setItem('st_scratchpad', val);
   };
 
-  const drink = async () => {
-    const next = glassesCount + 1;
-    setGlassesCount(next);
-    await save(next, glassSize, reminderMins, goalMl);
-    // Schedule next reminder
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: { title: '💧 Time to hydrate!', body: 'Drink a glass of water — your brain needs it!', sound: true },
-        trigger: { seconds: reminderMins * 60 },
-      });
-    } catch {}
+  const handleSaveToNotes = () => {
+    if (!text.trim()) { Alert.alert('Error', 'Scratchpad is empty'); return; }
+    const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    addNote(`Scratchpad - ${dateStr}`, text.trim(), 'Aptitude / Quant');
+    saveText('');
+    Alert.alert('Saved! 📝', 'Saved as a permanent study note under Notes tab.');
+    onClose();
   };
 
-  const reset = async () => {
-    setGlassesCount(0);
-    await save(0, glassSize, reminderMins, goalMl);
+  const handleClear = () => {
+    Alert.alert(
+      'Clear Scratchpad',
+      'Are you sure you want to clear your scratchpad thoughts?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: () => saveText('') }
+      ]
+    );
   };
-
-  const totalMl   = glassesCount * glassSize;
-  const pct       = Math.min(Math.round(totalMl / goalMl * 100), 100);
-  const glassGoal = Math.ceil(goalMl / glassSize);
 
   return (
-    <SafeAreaView style={wtr.safe}>
-      <View style={wtr.header}>
-        <Text style={wtr.title}>💧 Hydration Station</Text>
+    <SafeAreaView style={sch.safe}>
+      <View style={sch.header}>
+        <Text style={sch.title}>Scratchpad 📝</Text>
         <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={COLORS.textSecondary}/></TouchableOpacity>
       </View>
+      <Text style={sch.sub}>Jot down quick thoughts, formulas, or reminders. Converts instantly into a Note.</Text>
 
-      <View style={wtr.progressCard}>
-        <Text style={wtr.progressLabel}>Today's Progress</Text>
-        <Text style={wtr.progressMl}>🎯 {totalMl} ml / {goalMl} ml</Text>
-        <View style={wtr.barTrack}>
-          <View style={[wtr.barFill, { width: pct + '%' }]}/>
-        </View>
-        <Text style={wtr.pctText}>{pct}%  ·  {glassesCount} / {glassGoal} glasses</Text>
+      <TextInput
+        style={sch.input}
+        placeholder="Type anything here..."
+        placeholderTextColor={COLORS.textMuted}
+        value={text}
+        onChangeText={saveText}
+        multiline
+        textAlignVertical="top"
+      />
+
+      <View style={sch.buttons}>
+        <TouchableOpacity style={sch.clearBtn} onPress={handleClear}>
+          <Text style={sch.clearBtnText}>Clear</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={sch.saveBtn} onPress={handleSaveToNotes}>
+          <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+          <Text style={sch.saveBtnText}>Save as Note</Text>
+        </TouchableOpacity>
       </View>
-
-      <View style={wtr.settingsCard}>
-        <Text style={wtr.settingsTitle}>⚙️ Quick Settings</Text>
-        <View style={wtr.settingRow}>
-          <Text style={wtr.settingLabel}>Glass Size</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{flexDirection:'row',gap:6}}>
-              {GLASS_SIZES.map(s => (
-                <TouchableOpacity key={s} style={[wtr.pill, glassSize===s && wtr.pillActive]} onPress={async()=>{setGlassSize(s);await save(glassesCount,s,reminderMins,goalMl);}}>
-                  <Text style={[wtr.pillText, glassSize===s && wtr.pillTextActive]}>{s} ml</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-        <View style={wtr.settingRow}>
-          <Text style={wtr.settingLabel}>Remind every</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{flexDirection:'row',gap:6}}>
-              {REMINDER_OPTS.map(r => (
-                <TouchableOpacity key={r} style={[wtr.pill, reminderMins===r && wtr.pillActive]} onPress={async()=>{setReminderMins(r);await save(glassesCount,glassSize,r,goalMl);}}>
-                  <Text style={[wtr.pillText, reminderMins===r && wtr.pillTextActive]}>{r} min</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-
-      <TouchableOpacity style={wtr.drinkBtn} onPress={drink}>
-        <Text style={wtr.drinkIcon}>🚰</Text>
-        <Text style={wtr.drinkBtnText}>DRINK 1 GLASS</Text>
-        <Text style={wtr.drinkSub}>(+{glassSize} ml)</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={wtr.resetBtn} onPress={reset}>
-        <Ionicons name="refresh" size={14} color={COLORS.textMuted}/>
-        <Text style={wtr.resetText}>Reset for Today</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
-const wtr = StyleSheet.create({
-  safe:         { flex:1, backgroundColor:COLORS.bg, padding:16 },
-  header:       { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:16 },
-  title:        { fontSize:FONTS.lg, fontWeight:'700', color:COLORS.textPrimary },
-  progressCard: { backgroundColor:COLORS.card, borderRadius:RADIUS.lg, padding:16, marginBottom:14, borderWidth:1, borderColor:COLORS.border },
-  progressLabel:{ fontSize:FONTS.xs, color:COLORS.textSecondary, fontWeight:'600', marginBottom:6 },
-  progressMl:   { fontSize:FONTS.lg, fontWeight:'700', color:COLORS.textPrimary, marginBottom:12 },
-  barTrack:     { height:12, backgroundColor:COLORS.border, borderRadius:6, overflow:'hidden', marginBottom:8 },
-  barFill:      { height:'100%', backgroundColor:'#3B9EFF', borderRadius:6 },
-  pctText:      { fontSize:FONTS.xs, color:COLORS.textSecondary },
-  settingsCard: { backgroundColor:COLORS.card, borderRadius:RADIUS.lg, padding:14, marginBottom:16, borderWidth:1, borderColor:COLORS.border, gap:12 },
-  settingsTitle:{ fontSize:FONTS.sm, fontWeight:'700', color:COLORS.textPrimary, marginBottom:4 },
-  settingRow:   { gap:8 },
-  settingLabel: { fontSize:FONTS.xs, color:COLORS.textSecondary, fontWeight:'600' },
-  pill:         { paddingHorizontal:12, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:COLORS.border, backgroundColor:COLORS.bg },
-  pillActive:   { backgroundColor:'#3B9EFF'+ '33', borderColor:'#3B9EFF' },
-  pillText:     { fontSize:FONTS.xs, color:COLORS.textMuted, fontWeight:'500' },
-  pillTextActive:{ color:'#3B9EFF', fontWeight:'700' },
-  drinkBtn:     { backgroundColor:'#1A3A5C', borderRadius:RADIUS.lg, padding:20, alignItems:'center', borderWidth:2, borderColor:'#3B9EFF', marginBottom:12 },
-  drinkIcon:    { fontSize:32, marginBottom:4 },
-  drinkBtnText: { fontSize:FONTS.lg, fontWeight:'900', color:'#3B9EFF', letterSpacing:1 },
-  drinkSub:     { fontSize:FONTS.xs, color:'#3B9EFF', opacity:0.7, marginTop:2 },
-  resetBtn:     { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6, paddingVertical:12 },
-  resetText:    { fontSize:FONTS.xs, color:COLORS.textMuted },
+const sch = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.bg, padding: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  title: { fontSize: FONTS.lg, fontWeight: '700', color: COLORS.textPrimary },
+  sub: { fontSize: FONTS.xs, color: COLORS.textSecondary, marginBottom: 16 },
+  input: { flex: 1, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: 14, color: COLORS.textPrimary, fontSize: FONTS.md, borderWidth: 1, borderColor: COLORS.border, minHeight: 200, marginBottom: 16, textAlignVertical: 'top' },
+  buttons: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  clearBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border },
+  clearBtnText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: FONTS.md },
+  saveBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: RADIUS.md },
+  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: FONTS.md },
+});
+
+// ── Pomodoro Focus Timer ──────────────────────────────────────────────────────
+function PomodoroTimer({ onClose }) {
+  const [mins, setMins] = useState(25);
+  const [secs, setSecs] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const [isBreak, setIsBreak] = useState(false);
+
+  useEffect(() => {
+    let interval = null;
+    if (isActive) {
+      interval = setInterval(() => {
+        if (secs > 0) {
+          setSecs(s => s - 1);
+        } else if (secs === 0) {
+          if (mins === 0) {
+            Vibration.vibrate([500, 500, 500]);
+            Alert.alert(
+              isBreak ? 'Break finished! 🚀' : 'Focus session finished! 🎉',
+              isBreak ? 'Ready to focus again?' : 'Take a short break!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    const nextBreak = !isBreak;
+                    setIsBreak(nextBreak);
+                    setMins(nextBreak ? 5 : 25);
+                    setSecs(0);
+                    setIsActive(false);
+                  }
+                }
+              ]
+            );
+            clearInterval(interval);
+          } else {
+            setMins(m => m - 1);
+            setSecs(59);
+          }
+        }
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, mins, secs, isBreak]);
+
+  const toggleTimer = () => {
+    setIsActive(!isActive);
+  };
+
+  const resetTimer = () => {
+    setIsActive(false);
+    setMins(isBreak ? 5 : 25);
+    setSecs(0);
+  };
+
+  const switchMode = () => {
+    setIsActive(false);
+    const nextBreak = !isBreak;
+    setIsBreak(nextBreak);
+    setMins(nextBreak ? 5 : 25);
+    setSecs(0);
+  };
+
+  const progress = ((isBreak ? 5 : 25) * 60 - (mins * 60 + secs)) / ((isBreak ? 5 : 25) * 60);
+
+  return (
+    <SafeAreaView style={pom.safe}>
+      <View style={pom.header}>
+        <Text style={pom.title}>Focus Timer ⏱️</Text>
+        <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={COLORS.textSecondary}/></TouchableOpacity>
+      </View>
+
+      <View style={pom.card}>
+        <Text style={pom.modeLabel}>{isBreak ? '☕ BREAK TIME' : '🎯 FOCUS TIME'}</Text>
+        <Text style={pom.timerText}>
+          {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+        </Text>
+        
+        <View style={pom.progressTrack}>
+          <View style={[pom.progressFill, { width: `${progress * 100}%`, backgroundColor: isBreak ? COLORS.green : COLORS.accent }]} />
+        </View>
+
+        <View style={pom.controls}>
+          <TouchableOpacity style={[pom.btn, { backgroundColor: isActive ? COLORS.red : COLORS.green }]} onPress={toggleTimer}>
+            <Ionicons name={isActive ? 'pause' : 'play'} size={20} color="#fff" />
+            <Text style={pom.btnText}>{isActive ? 'Pause' : 'Start'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[pom.btn, { backgroundColor: COLORS.card }]} onPress={resetTimer}>
+            <Ionicons name="refresh" size={20} color={COLORS.textPrimary} />
+            <Text style={pom.btnText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={pom.switchBtn} onPress={switchMode}>
+          <Text style={pom.switchText}>Switch to {isBreak ? 'Focus Mode (25m)' : 'Break Mode (5m)'}</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const pom = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.bg, padding: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  title: { fontSize: FONTS.lg, fontWeight: '700', color: COLORS.textPrimary },
+  card: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 24, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 16, width: '100%' },
+  modeLabel: { fontSize: FONTS.sm, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 1 },
+  timerText: { fontSize: 64, fontWeight: '100', color: COLORS.textPrimary, marginVertical: 10 },
+  progressTrack: { height: 8, width: '100%', backgroundColor: COLORS.border, borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4 },
+  controls: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 8 },
+  btn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: RADIUS.md },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: FONTS.md },
+  switchBtn: { marginTop: 12, padding: 10 },
+  switchText: { color: COLORS.accentLight, fontWeight: '600', fontSize: FONTS.sm },
 });
 
 // ── FAB Wheel ─────────────────────────────────────────────────────────────────
@@ -702,8 +612,8 @@ const TOOLS = [
   { id:'reminder',  icon:'alarm-outline',             label:'Remind',    color:'#2DD4A0' },
   { id:'alarm',     icon:'time-outline',              label:'Alarm',     color:'#F5A623' },
   { id:'formula',   icon:'flask-outline',             label:'Formulas',  color:'#FF5C6C' },
-  { id:'converter', icon:'swap-horizontal-outline',   label:'Units',     color:'#74B9FF' },
-  { id:'water',     icon:'water-outline',             label:'Water',     color:'#3B9EFF' },
+  { id:'scratch',   icon:'document-text-outline',     label:'Scratch',   color:'#74B9FF' },
+  { id:'pomo',      icon:'timer-outline',             label:'Focus',     color:'#3B9EFF' },
 ];
 
 export default function FloatingTools() {
@@ -711,6 +621,25 @@ export default function FloatingTools() {
   const [activeTool, setActiveTool] = useState(null);
   const spinAnim  = useRef(new Animated.Value(0)).current;
   const itemAnims = useRef(TOOLS.map(()=>new Animated.Value(0))).current;
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setOpen(false);
+        setKeyboardVisible(true);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const toggle = (forceClose = false) => {
     const toOpen = forceClose ? false : !open;
@@ -735,9 +664,10 @@ export default function FloatingTools() {
 
   const SPACING = 58;
 
+  if (keyboardVisible) return null;
+
   return (
     <>
-      {/* Full-screen backdrop when open */}
       {open && (
         <TouchableWithoutFeedback onPress={()=>toggle(true)}>
           <View style={styles.backdrop}/>
@@ -761,18 +691,17 @@ export default function FloatingTools() {
 
         <TouchableOpacity style={styles.fab} onPress={()=>toggle()} activeOpacity={0.85}>
           <Animated.View style={{transform:[{rotate:spin}]}}>
-            <Ionicons name="add" size={28} color="#fff"/>
+            <Ionicons name={open ? "close" : "apps"} size={open ? 26 : 22} color="#fff"/>
           </Animated.View>
         </TouchableOpacity>
       </View>
 
-      {/* Tool modals */}
       <Modal visible={activeTool==='calc'}      animationType="slide" onRequestClose={()=>setActiveTool(null)}><Calculator     onClose={()=>setActiveTool(null)}/></Modal>
       <Modal visible={activeTool==='reminder'}  animationType="slide" onRequestClose={()=>setActiveTool(null)}><RemindersSheet onClose={()=>setActiveTool(null)}/></Modal>
       <Modal visible={activeTool==='alarm'}     animationType="slide" onRequestClose={()=>setActiveTool(null)}><AlarmSheet     onClose={()=>setActiveTool(null)}/></Modal>
       <Modal visible={activeTool==='formula'}   animationType="slide" onRequestClose={()=>setActiveTool(null)}><FormulaSheet   onClose={()=>setActiveTool(null)}/></Modal>
-      <Modal visible={activeTool==='converter'} animationType="slide" onRequestClose={()=>setActiveTool(null)}><UnitConverter  onClose={()=>setActiveTool(null)}/></Modal>
-      <Modal visible={activeTool==='water'}     animationType="slide" onRequestClose={()=>setActiveTool(null)}><WaterTracker   onClose={()=>setActiveTool(null)}/></Modal>
+      <Modal visible={activeTool==='scratch'}   animationType="slide" onRequestClose={()=>setActiveTool(null)}><Scratchpad     onClose={()=>setActiveTool(null)}/></Modal>
+      <Modal visible={activeTool==='pomo'}      animationType="slide" onRequestClose={()=>setActiveTool(null)}><PomodoroTimer  onClose={()=>setActiveTool(null)}/></Modal>
     </>
   );
 }

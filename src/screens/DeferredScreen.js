@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Pressable, Animated, Dimensions,
+  TextInput, Modal, Pressable, Animated, Dimensions, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,6 +67,17 @@ export default function DeferredScreen() {
     setShowModal(false);
   };
 
+  const handleDeleteNote = (id) => {
+    Alert.alert(
+      'Delete Sticky Note',
+      'Are you sure you want to delete this pinned note?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteDeferred(id) }
+      ]
+    );
+  };
+
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <View style={styles.headerRow}>
@@ -102,8 +113,8 @@ export default function DeferredScreen() {
         <ScrollView showsVerticalScrollIndicator={false} style={styles.board}>
           <Text style={styles.hintText}>Tap to toggle done · Long press to delete</Text>
           <View style={styles.columns}>
-            <View style={styles.column}>{col1.map(n => <StickyNote key={n.id} note={n} onToggle={toggleDeferred} onDelete={deleteDeferred} />)}</View>
-            <View style={styles.column}>{col2.map(n => <StickyNote key={n.id} note={n} onToggle={toggleDeferred} onDelete={deleteDeferred} />)}</View>
+            <View style={styles.column}>{col1.map(n => <StickyNote key={n.id} note={n} onToggle={toggleDeferred} onDelete={handleDeleteNote} />)}</View>
+            <View style={styles.column}>{col2.map(n => <StickyNote key={n.id} note={n} onToggle={toggleDeferred} onDelete={handleDeleteNote} />)}</View>
           </View>
           <View style={{ height:100 }} />
         </ScrollView>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
   Modal, Pressable, TextInput, ScrollView, Image,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
@@ -392,6 +392,22 @@ export default function Mascot() {
 
   const [showChat,   setShowChat]   = useState(false);
   const [pipVisible, setPipVisible] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Hide Pip on quiz screen - check route via navigation state
   useEffect(() => {
@@ -555,7 +571,7 @@ export default function Mascot() {
     ]).start(() => setShowChat(true));
   };
 
-  if (!pipVisible) return null;
+  if (!pipVisible || keyboardVisible) return null;
 
   return (
     <View style={styles.container} pointerEvents="box-none">
