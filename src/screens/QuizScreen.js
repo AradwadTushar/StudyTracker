@@ -245,7 +245,7 @@ function QuizSetup({ visible, onClose, onStart, goals, geminiKey }) {
     setLoading(true);
     try {
       const quiz = await generateQuiz(topic.trim(), selGoals, difficulty, parseInt(count), geminiKey);
-      onStart(quiz);
+      onStart(quiz, selGoals);
     } catch (e) {
       setError(e.message);
     }
@@ -513,9 +513,9 @@ export default function QuizScreen({ onClose }) {
         onClose={() => setShowSetup(false)}
         goals={goals}
         geminiKey={geminiKey || ''}
-        onStart={(quiz) => {
+        onStart={(quiz, selectedGoals) => {
           setShowSetup(false);
-          setActiveQuiz({ ...quiz, goals: [] });
+          setActiveQuiz({ ...quiz, goals: selectedGoals });
         }}
       />
     </View>

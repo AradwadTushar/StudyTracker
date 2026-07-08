@@ -101,7 +101,7 @@ function TopicCard({ topic, subjectColor, onToggle, onDelete, onAddSubtopic, onD
 }
 
 // ── Subject card ─────────────────────────────────────────────────────────────
-function SubjectCard({ subject, topics, onToggle, onAddTopic, onDeleteTopic, onDeleteSubject, onAddSubtopic, onDeleteSubtopic, filter }) {
+function SubjectCard({ subject, topics, onToggle, onAddTopic, onDeleteTopic, onDeleteSubject, onAddSubtopic, onDeleteSubtopic, filter, onLongPress }) {
   const [expanded, setExpanded] = useState(false);
   const [addingTopic, setAddingTopic] = useState(false);
   const [newTopic, setNewTopic] = useState('');
@@ -124,10 +124,13 @@ function SubjectCard({ subject, topics, onToggle, onAddTopic, onDeleteTopic, onD
 
   return (
     <View style={[styles.subjectCard, SHADOW.card]}>
-      <TouchableOpacity style={styles.cardHeader} onPress={() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setExpanded(e => !e);
-      }}>
+      <TouchableOpacity style={styles.cardHeader} 
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setExpanded(e => !e);
+        }}
+        onLongPress={onLongPress}
+      >
         <View style={[styles.subjectIcon, { backgroundColor: color + '22' }]}>
           <View style={[styles.subjectIconDot, { backgroundColor: color }]} />
         </View>
@@ -237,6 +240,35 @@ export default function SyllabusScreen() {
     if (newGoalName.trim()) { addGoal(newGoalName.trim(), newGoalColor); setNewGoalName(''); setNewGoalColor(GOAL_COLORS[0]); setShowAddGoal(false); }
   };
 
+  const handleSubjectLongPress = (subject) => {
+    const targetGoalId = viewGoalId || activeGoalId;
+    if (!targetGoalId) return;
+    const targetGoal = goals.find(g => g.id === targetGoalId);
+    if (!targetGoal) return;
+    const isAssigned = (targetGoal.subjects || []).includes(subject);
+
+    Alert.alert(
+      isAssigned ? 'Remove Subject' : 'Assign Subject',
+      isAssigned
+        ? `Remove "${subject}" from "${targetGoal.name}" goal?`
+        : `Assign "${subject}" to "${targetGoal.name}" goal?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isAssigned ? 'Remove' : 'Assign',
+          style: isAssigned ? 'destructive' : 'default',
+          onPress: () => {
+            if (isAssigned) {
+              removeSubjectFromGoal(targetGoalId, subject);
+            } else {
+              addSubjectToGoal(targetGoalId, subject);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -324,6 +356,7 @@ export default function SyllabusScreen() {
             onDeleteSubject={deleteSubject}
             onAddSubtopic={(topicId, sub) => addSubtopic(subject, topicId, sub)}
             onDeleteSubtopic={(topicId, i) => deleteSubtopic(subject, topicId, i)}
+            onLongPress={() => handleSubjectLongPress(subject)}
           />
         ))}
 

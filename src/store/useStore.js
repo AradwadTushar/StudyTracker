@@ -45,11 +45,41 @@ export const useStore = create((set, get) => ({
     await AsyncStorage.setItem(KEYS.userName, name || '');
     await AsyncStorage.setItem(KEYS.geminiKey, apiKey || '');
 
+    // Configure goals based on syllabus selection
+    const goals = [];
+    if (loadGate) {
+      const gateSubjects = ['C Programming', 'Data Structures', 'Algorithms', 'OS', 'DBMS', 'Computer Networks', 'COA', 'Discrete Maths', 'Aptitude / Quant'];
+      goals.push({ id: 'g_gate2027', name: 'GATE 2027', color: '#6C63FF', subjects: gateSubjects, done: false });
+    }
+    if (loadCdac) {
+      const cdacSubjects = ['Aptitude / Quant', 'COA', 'C Programming', 'Data Structures', 'OS', 'Computer Networks'];
+      goals.push({ id: 'g_cdac', name: 'C-DAC', color: '#2DD4A0', subjects: cdacSubjects, done: false });
+    }
+    const activeGoalId = goals.length > 0 ? goals[0].id : null;
+
+    // Configure initial syllabus based on selection
+    const fullSyllabus = buildInitialSyllabus();
+    const filteredSyllabus = {};
+    Object.keys(fullSyllabus).forEach(sub => {
+      const isGateSub = ['C Programming', 'Data Structures', 'Algorithms', 'OS', 'DBMS', 'Computer Networks', 'COA', 'Discrete Maths', 'Aptitude / Quant'].includes(sub);
+      const isCdacSub = ['Aptitude / Quant', 'COA', 'C Programming', 'Data Structures', 'OS', 'Computer Networks'].includes(sub);
+      if ((loadGate && isGateSub) || (loadCdac && isCdacSub)) {
+        filteredSyllabus[sub] = fullSyllabus[sub];
+      }
+    });
+
     set({
       onboarded: true,
       userName: name || '',
       geminiKey: apiKey || '',
+      goals,
+      activeGoalId,
+      syllabus: filteredSyllabus,
     });
+
+    await AsyncStorage.setItem(KEYS.goals, JSON.stringify(goals));
+    await AsyncStorage.setItem(KEYS.activeGoalId, activeGoalId || '');
+    await AsyncStorage.setItem(KEYS.syllabus, JSON.stringify(filteredSyllabus));
   },
 
   // ── Sessions ──────────────────────────────────────────────────────

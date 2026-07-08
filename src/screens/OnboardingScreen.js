@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, KeyboardAvoidingView, Platform, Alert,
+  ScrollView, KeyboardAvoidingView, Platform, Alert, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -131,7 +131,7 @@ export default function OnboardingScreen({ onComplete }) {
                   <Ionicons name={showKey?'eye-off-outline':'eye-outline'} size={20} color={COLORS.textSecondary}/>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.linkBtn} onPress={() => {}}>
+              <TouchableOpacity style={styles.linkBtn} onPress={() => Linking.openURL('https://aistudio.google.com/')}>
                 <Ionicons name="open-outline" size={14} color={COLORS.accent}/>
                 <Text style={styles.linkText}>Get free key at aistudio.google.com</Text>
               </TouchableOpacity>
