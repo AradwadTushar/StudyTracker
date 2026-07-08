@@ -18,7 +18,8 @@
         "foregroundImage": "./assets/Pip_Adaptive_Icon.png",
         "backgroundColor": "#0D0F14"
       },
-      "package": "com.tushar.studytracker"
+      "package": "com.tushar.studytracker",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "extra": {
       "eas": {

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../store/useStore'; // Fixed Named Import Structure
+import { useStore } from '../store/useStore'; 
 import NoteCard from '../components/NoteCard';
 import RichNoteEditor from '../components/RichNoteEditor';
 import { COLORS, FONTS, RADIUS, SHADOW } from '../utils/theme';
@@ -81,27 +81,30 @@ export default function NotesScreen() {
         ) : null}
       </View>
 
-      {/* Track Filter Tabs */}
+      {/* Track Filter Tabs — Fixed layout structure to prevent vertical stretching */}
       {usedSubjects.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectFilter}>
-          <View style={{ flexDirection: 'row', gap: 8, padding: 4 }}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.subjectFilter}
+          contentContainerStyle={styles.subjectFilterContent}
+        >
+          <TouchableOpacity 
+            style={[styles.filterChip, !filterSubject && styles.filterChipActive]} 
+            onPress={() => setFilterSubject(null)}
+          >
+            <Text style={[styles.filterChipText, !filterSubject && styles.filterChipTextActive]}>All</Text>
+          </TouchableOpacity>
+          {usedSubjects.map(s => (
             <TouchableOpacity 
-              style={[styles.filterChip, !filterSubject && styles.filterChipActive]} 
-              onPress={() => setFilterSubject(null)}
+              key={s} 
+              style={[styles.filterChip, filterSubject === s && styles.filterChipActive]}
+              onPress={() => setFilterSubject(filterSubject === s ? null : s)}
             >
-              <Text style={[styles.filterChipText, !filterSubject && styles.filterChipTextActive]}>All</Text>
+              <View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.subjects?.[s] || COLORS.accent }]} />
+              <Text style={[styles.filterChipText, filterSubject === s && styles.filterChipTextActive]}>{s}</Text>
             </TouchableOpacity>
-            {usedSubjects.map(s => (
-              <TouchableOpacity 
-                key={s} 
-                style={[styles.filterChip, filterSubject === s && styles.filterChipActive]}
-                onPress={() => setFilterSubject(filterSubject === s ? null : s)}
-              >
-                <View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.subjects?.[s] || COLORS.accent }]} />
-                <Text style={[styles.filterChipText, filterSubject === s && styles.filterChipTextActive]}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          ))}
         </ScrollView>
       )}
 
@@ -165,11 +168,33 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: COLORS.accent, width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', ...SHADOW.glow },
   searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: RADIUS.md, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
   searchInput: { flex: 1, padding: 10, color: COLORS.textPrimary, fontSize: FONTS.sm },
-  subjectFilter: { paddingLeft: 12, marginBottom: 10 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+  
+  // Fixed ScrollView container sizing limits
+  subjectFilter: { 
+    maxHeight: 46, 
+    marginBottom: 12,
+  },
+  subjectFilterContent: {
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterChip: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 6, 
+    height: 34,
+    paddingHorizontal: 14, 
+    borderRadius: 17, 
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card
+  },
   filterChipActive: { backgroundColor: COLORS.accentGlow, borderColor: COLORS.accent },
-  filterChipText: { fontSize: FONTS.xs, color: COLORS.textMuted, fontWeight: '500' },
+  filterChipText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
   filterChipTextActive: { color: COLORS.accentLight },
+  
   list: { flex: 1, paddingHorizontal: 16 },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 10 },
   emptyTitle: { fontSize: FONTS.lg, fontWeight: '700', color: COLORS.textPrimary },
