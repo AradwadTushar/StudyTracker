@@ -571,23 +571,25 @@ export default function Mascot() {
     ]).start(() => setShowChat(true));
   };
 
-  if (!pipVisible || keyboardVisible) return null;
+  if (!pipVisible) return null;
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {!showChat && (
+      {!showChat && !keyboardVisible && (
         <Bubble text={bubbleLines[lineIdx % bubbleLines.length]} fadeAnim={bubbleFade} />
       )}
-      <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
-        <PipSprite
-          pose={pose}
-          floatAnim={floatAnim}
-          bounceAnim={bounceAnim}
-          swayAnim={swayAnim}
-          scaleAnim={scaleAnim}
-          fadeAnim={fadeAnim}
-        />
-      </TouchableOpacity>
+      {!showChat && !keyboardVisible && (
+        <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
+          <PipSprite
+            pose={pose}
+            floatAnim={floatAnim}
+            bounceAnim={bounceAnim}
+            swayAnim={swayAnim}
+            scaleAnim={scaleAnim}
+            fadeAnim={fadeAnim}
+          />
+        </TouchableOpacity>
+      )}
       <ChatModal visible={showChat} onClose={() => setShowChat(false)} appCtx={appCtx} />
     </View>
   );

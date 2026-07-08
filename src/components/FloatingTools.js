@@ -664,37 +664,37 @@ export default function FloatingTools() {
 
   const SPACING = 58;
 
-  if (keyboardVisible) return null;
-
   return (
     <>
-      {open && (
+      {open && !keyboardVisible && (
         <TouchableWithoutFeedback onPress={()=>toggle(true)}>
           <View style={styles.backdrop}/>
         </TouchableWithoutFeedback>
       )}
 
-      <View style={styles.container} pointerEvents="box-none">
-        {TOOLS.map((tool,i) => {
-          const ty   = itemAnims[i].interpolate({ inputRange:[0,1], outputRange:[0,-(SPACING*(i+1))] });
-          const sc   = itemAnims[i].interpolate({ inputRange:[0,1], outputRange:[0.3,1] });
-          const op   = itemAnims[i];
-          return (
-            <Animated.View key={tool.id} style={[styles.toolRow, { transform:[{translateY:ty},{scale:sc}], opacity:op }]} pointerEvents={open?'auto':'none'}>
-              <Text style={styles.toolLabel}>{tool.label}</Text>
-              <TouchableOpacity style={[styles.toolBtn,{backgroundColor:tool.color}]} onPress={()=>openTool(tool.id)}>
-                <Ionicons name={tool.icon} size={19} color="#fff"/>
-              </TouchableOpacity>
-            </Animated.View>
-          );
-        })}
+      {!keyboardVisible && (
+        <View style={styles.container} pointerEvents="box-none">
+          {TOOLS.map((tool,i) => {
+            const ty   = itemAnims[i].interpolate({ inputRange:[0,1], outputRange:[0,-(SPACING*(i+1))] });
+            const sc   = itemAnims[i].interpolate({ inputRange:[0,1], outputRange:[0.3,1] });
+            const op   = itemAnims[i];
+            return (
+              <Animated.View key={tool.id} style={[styles.toolRow, { transform:[{translateY:ty},{scale:sc}], opacity:op }]} pointerEvents={open?'auto':'none'}>
+                <Text style={styles.toolLabel}>{tool.label}</Text>
+                <TouchableOpacity style={[styles.toolBtn,{backgroundColor:tool.color}]} onPress={()=>openTool(tool.id)}>
+                  <Ionicons name={tool.icon} size={19} color="#fff"/>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
 
-        <TouchableOpacity style={styles.fab} onPress={()=>toggle()} activeOpacity={0.85}>
-          <Animated.View style={{transform:[{rotate:spin}]}}>
-            <Ionicons name={open ? "close" : "apps"} size={open ? 26 : 22} color="#fff"/>
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.fab} onPress={()=>toggle()} activeOpacity={0.85}>
+            <Animated.View style={{transform:[{rotate:spin}]}}>
+              <Ionicons name={open ? "close" : "apps"} size={open ? 26 : 22} color="#fff"/>
+            </Animated.View>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Modal visible={activeTool==='calc'}      animationType="slide" onRequestClose={()=>setActiveTool(null)}><Calculator     onClose={()=>setActiveTool(null)}/></Modal>
       <Modal visible={activeTool==='reminder'}  animationType="slide" onRequestClose={()=>setActiveTool(null)}><RemindersSheet onClose={()=>setActiveTool(null)}/></Modal>
